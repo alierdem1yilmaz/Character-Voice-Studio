@@ -31,6 +31,14 @@ async function uploadToBucket(
   return publicUrl.publicUrl;
 }
 
+/** Supabase Storage anahtarlari icin guvenli olmayan (Turkce vb.) karakterleri temizler. */
+function sanitizeStorageKey(fileName: string): string {
+  const normalized = fileName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, ""); // aksan isaretlerini kaldir (ö -> o, ş -> s, vb.)
+  return normalized.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
 /** fal.ai'nin urettigi gecici dosya URL'ini indirip Supabase Storage'a kalici olarak yukler. */
 export async function persistRemoteFile(
   bucket: string,
@@ -43,6 +51,6 @@ export async function persistRemoteFile(
   }
   const contentType = response.headers.get("content-type") ?? "application/octet-stream";
   const blob = await response.blob();
-  const path = `${Date.now()}-${fileName}`;
+  const path = `${Date.now()}-${sanitizeStorageKey(fileName)}`;
   return uploadToBucket(bucket, path, blob, contentType);
 }
